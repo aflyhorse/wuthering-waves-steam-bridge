@@ -39,7 +39,7 @@ namespace WutheringWavesSteamBridge
             headline = MakeLabel("鸣潮接入Steam启动", 26, ink); layout.Controls.Add(headline, 0, 1);
             layout.Controls.Add(MakeLabel("使用已有国服客户端 · 直接启动 · Steam 计时与原生叠加层", 10, muted), 0, 2);
             var card = new BufferedLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(184, Color.White), Padding = new Padding(20, 14, 20, 10), ColumnCount = 1, RowCount = 8, Margin = new Padding(0) };
-            foreach (int h in new[] { 25, 40, 25, 40, 42, 25, 36 }) card.RowStyles.Add(new RowStyle(SizeType.Absolute, h));
+            foreach (int h in new[] { 25, 40, 25, 40, 42, 40, 36 }) card.RowStyles.Add(new RowStyle(SizeType.Absolute, h));
             card.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             layout.Controls.Add(card, 0, 3);
             card.Controls.Add(MakeLabel("01   STEAM 账号与游戏库", 10, muted), 0, 0);

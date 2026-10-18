@@ -51,6 +51,30 @@ namespace WutheringWavesSteamBridge
                 r.BaseStream.Position = offset; return r.ReadUInt32() == 0x4550 && r.ReadUInt16() == 0x8664;
             }
         }
+        public static string FindInstalledGame()
+        {
+            var candidates = new[]
+            {
+                new { Hive = RegistryHive.LocalMachine, View = RegistryView.Registry32, Key = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\KRInstall Wuthering Waves", Value = "LauncherPath" },
+                new { Hive = RegistryHive.LocalMachine, View = RegistryView.Registry64, Key = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\KRInstall Wuthering Waves", Value = "LauncherPath" },
+                new { Hive = RegistryHive.CurrentUser, View = RegistryView.Default, Key = @"Software\kurogame\KRLauncher\Aki_G152_default_10003", Value = "SingleLauncherInstallPath" },
+            };
+            foreach (var c in candidates)
+            {
+                string root = null;
+                try
+                {
+                    using (var baseKey = RegistryKey.OpenBaseKey(c.Hive, c.View))
+                    using (var key = baseKey.OpenSubKey(c.Key))
+                        if (key != null) root = Convert.ToString(key.GetValue(c.Value));
+                }
+                catch { continue; }
+                if (String.IsNullOrWhiteSpace(root)) continue;
+                string exe = Path.Combine(root.Trim(), "Wuthering Waves Game", "Wuthering Waves.exe");
+                if (ValidGame(exe)) return exe;
+            }
+            return null;
+        }
         public static string ClientStatus(string game, out bool ready)
         {
             ready = false;
@@ -65,7 +89,7 @@ namespace WutheringWavesSteamBridge
                 if (File.Exists(App.StatePath)) result.Installation = App.Load<Installation>(App.StatePath);
                 result.SteamRoot = FindSteam(); result.Account = SteamAccount.ProbeIsolated(result.SteamRoot);
                 RuntimeConfig config = File.Exists(App.ConfigPath) ? App.Load<RuntimeConfig>(App.ConfigPath) : null;
-                result.Game = game ?? (config != null && ValidGame(config.Game) ? config.Game : null);
+                result.Game = game ?? (config != null && ValidGame(config.Game) ? config.Game : null) ?? FindInstalledGame();
                 result.Quality = quality ?? (config != null ? config.Quality : null) ?? QualityPackage.Hd.Id;
                 result.GameStatus = ClientStatus(result.Game, out result.ClientReady);
             }
