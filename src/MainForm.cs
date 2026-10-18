@@ -12,10 +12,10 @@ namespace WutheringWavesSteamBridge
     {
         private readonly Bitmap backgroundArt;
         private readonly Color ink = Color.FromArgb(32, 45, 57), blue = Color.FromArgb(26, 112, 180), muted = Color.FromArgb(92, 108, 120);
-        private Label account, client, installed, status, headline;
-        private ComboBox quality;
-        private TextBox game;
-        private Button enable, restore, refresh, chooseGame;
+        private Label account, client, installed, status, headline, game;
+        private Button qualityButton, enable, restore, refresh, chooseGame;
+        private ContextMenuStrip qualityMenu;
+        private QualityPackage selectedQuality;
         private DetectionResult current;
         private bool busy, previewRendering;
         public MainForm()
@@ -48,22 +48,24 @@ namespace WutheringWavesSteamBridge
             var qualityRow = new BufferedLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.Transparent, ColumnCount = 2, Margin = new Padding(0, 0, 0, 6) };
             qualityRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60)); qualityRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             qualityRow.Controls.Add(MakeLabel("清晰度", 9, muted), 0, 0);
-            quality = new GlassComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230, Margin = new Padding(0, 3, 0, 0), BackColor = Color.FromArgb(128, Color.White) };
-            quality.Items.AddRange(QualityPackage.All);
             string savedQuality = null;
             if (File.Exists(App.ConfigPath)) { try { savedQuality = App.Load<RuntimeConfig>(App.ConfigPath).Quality; } catch (Exception) { } }
-            quality.SelectedItem = QualityPackage.Get(savedQuality);
-            qualityRow.Controls.Add(quality, 1, 0); card.Controls.Add(qualityRow, 0, 3);
+            selectedQuality = QualityPackage.Get(savedQuality);
+            qualityMenu = new ContextMenuStrip();
+            foreach (QualityPackage option in QualityPackage.All)
+            {
+                var choice = option; var entry = qualityMenu.Items.Add(choice.Name);
+                entry.Click += async delegate { selectedQuality = choice; UpdateQualityButton(); if (!busy) await RefreshDetection(); };
+            }
+            qualityButton = new GlassButton { Text = selectedQuality.Name + "  ▾", Width = 230, Height = 30, TextAlign = ContentAlignment.MiddleLeft, ForeColor = ink, Margin = new Padding(0, 5, 0, 0), Cursor = Cursors.Hand };
+            qualityButton.FlatAppearance.BorderColor = Color.FromArgb(200, 210, 218);
+            qualityButton.Click += delegate { qualityMenu.Show(qualityButton, 0, qualityButton.Height); };
+            qualityRow.Controls.Add(qualityButton, 1, 0); card.Controls.Add(qualityRow, 0, 3);
             client = MakeLabel("请选择鸣潮游戏可执行文件…", 10, ink); card.Controls.Add(client, 0, 4);
             card.Controls.Add(PathRow("游戏", out game, out chooseGame), 0, 5);
             card.Controls.Add(MakeLabel("03   载入状态", 10, muted), 0, 6);
             installed = MakeLabel("尚未载入", 10, ink); card.Controls.Add(installed, 0, 7);
             chooseGame.Click += delegate { ChooseGame(); };
-            quality.SelectedIndexChanged += async delegate
-            {
-                if (busy) return;
-                await RefreshDetection();
-            };
             var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.Transparent, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 12, 0, 0), Margin = new Padding(0) };
             enable = MakeButton("一键载入", 190, true); restore = MakeButton("撤回载入", 190, false); refresh = MakeButton("重新检测", 126, false);
             actions.Controls.AddRange(new Control[] { enable, restore, refresh }); layout.Controls.Add(actions, 0, 4);
@@ -113,14 +115,7 @@ namespace WutheringWavesSteamBridge
         {
             public GlassButton() { SetStyle(ControlStyles.SupportsTransparentBackColor, true); FlatStyle = FlatStyle.Flat; }
         }
-        private sealed class GlassTextBox : TextBox
-        {
-            public GlassTextBox() { SetStyle(ControlStyles.SupportsTransparentBackColor, true); }
-        }
-        private sealed class GlassComboBox : ComboBox
-        {
-            public GlassComboBox() { SetStyle(ControlStyles.SupportsTransparentBackColor, true); }
-        }
+        private void UpdateQualityButton() { qualityButton.Text = selectedQuality.Name + "  ▾"; }
         private Label MakeLabel(string text, float size, Color color)
         { return new Label { Text = text, Font = new Font("Microsoft YaHei UI", size), ForeColor = color, BackColor = Color.Transparent, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true, Margin = new Padding(0) }; }
         private Button MakeButton(string text, int width, bool primary)
@@ -128,12 +123,12 @@ namespace WutheringWavesSteamBridge
             var b = new GlassButton { Text = text, Width = width, Height = 40, BackColor = primary ? Color.FromArgb(128, blue) : Color.FromArgb(128, Color.White), ForeColor = primary ? Color.White : ink, Margin = new Padding(0, 0, 12, 0), Cursor = Cursors.Hand };
             b.FlatAppearance.BorderColor = primary ? blue : Color.FromArgb(200, 210, 218); return b;
         }
-        private Control PathRow(string title, out TextBox text, out Button browse)
+        private Control PathRow(string title, out Label text, out Button browse)
         {
             var row = new BufferedLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.Transparent, ColumnCount = 3, Margin = new Padding(0, 0, 0, 6) };
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60)); row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 64));
             row.Controls.Add(MakeLabel(title, 9, muted), 0, 0);
-            text = new GlassTextBox { Dock = DockStyle.Fill, ReadOnly = true, BackColor = Color.FromArgb(128, Color.White), BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(0, 3, 8, 0), Font = new Font("Microsoft YaHei UI", 9) };
+            text = new Label { Dock = DockStyle.Fill, BackColor = Color.Transparent, ForeColor = ink, BorderStyle = BorderStyle.FixedSingle, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true, Padding = new Padding(4, 0, 4, 0), Margin = new Padding(0, 3, 8, 0), Font = new Font("Microsoft YaHei UI", 9) };
             browse = MakeButton("选择", 60, false); browse.Dock = DockStyle.Fill; browse.Height = 30; browse.Margin = new Padding(0);
             row.Controls.Add(text, 1, 0); row.Controls.Add(browse, 2, 0); return row;
         }
@@ -145,7 +140,7 @@ namespace WutheringWavesSteamBridge
         private void SetBusy(bool value)
         {
             busy = value;
-            refresh.Enabled = chooseGame.Enabled = quality.Enabled = !value;
+            refresh.Enabled = chooseGame.Enabled = qualityButton.Enabled = !value;
             bool stateExists = File.Exists(App.StatePath);
             enable.Enabled = !value && !stateExists && current != null && current.Account != null && current.Account.Known && current.Account.Owned && current.ClientReady;
             restore.Enabled = !value && stateExists;
@@ -154,7 +149,7 @@ namespace WutheringWavesSteamBridge
         {
             SetBusy(true); status.Text = "正在读取当前 Steam 账号与鸣潮安装位置…";
             string g = String.IsNullOrWhiteSpace(game.Text) ? null : game.Text;
-            string qualityId = ((QualityPackage)quality.SelectedItem).Id;
+            string qualityId = selectedQuality.Id;
             try { current = await Task.Run(() => Detection.Scan(g, qualityId)); Populate(); }
             finally { SetBusy(false); }
         }
@@ -190,7 +185,7 @@ namespace WutheringWavesSteamBridge
         }
         public void SavePreview(string path)
         {
-            previewRendering = true; CreateControl(); current = Detection.Scan(null, null); Populate(); SetBusy(false); Show(); ActiveControl = refresh; game.SelectionLength = 0; Application.DoEvents();
+            previewRendering = true; CreateControl(); current = Detection.Scan(null, null); Populate(); SetBusy(false); Show(); ActiveControl = refresh; Application.DoEvents();
             using (var bitmap = new Bitmap(Width, Height)) { DrawToBitmap(bitmap, new Rectangle(0, 0, Width, Height)); bitmap.Save(path); }
             Hide();
         }
