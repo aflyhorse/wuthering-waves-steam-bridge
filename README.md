@@ -22,4 +22,4 @@
 
 适用于 Windows 10/11 x64，需要 .NET Framework 4.8。Steam 也需以管理员身份运行。
 
-本项目派生自 [Endfield Steam Bridge](https://github.com/SoledadAki/endfield-steam-bridge)，代码采用 MIT 开源协议。
+本项目作者：LunarShaddow（[Wuthering Waves Steam Bridge](https://github.com/aflyhorse/wuthering-waves-steam-bridge)），派生自 SoledadAki 的 [Endfield Steam Bridge](https://github.com/SoledadAki/endfield-steam-bridge)，代码采用 MIT 开源协议。

@@ -38,7 +38,7 @@ namespace WutheringWavesSteamBridge
             layout.Controls.Add(MakeLabel("WUTHERING WAVES  /  STEAM BRIDGE                                  v" + App.Version, 10, muted), 0, 0);
             headline = MakeLabel("鸣潮接入Steam启动", 26, ink); layout.Controls.Add(headline, 0, 1);
             layout.Controls.Add(MakeLabel("使用已有国服客户端 · 直接启动 · Steam 计时与原生叠加层", 10, muted), 0, 2);
-            var card = new BufferedLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(184, Color.White), Padding = new Padding(20, 14, 20, 10), ColumnCount = 1, RowCount = 8, Margin = new Padding(0) };
+            var card = new BufferedLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(128, Color.White), Padding = new Padding(20, 14, 20, 10), ColumnCount = 1, RowCount = 8, Margin = new Padding(0) };
             foreach (int h in new[] { 25, 40, 25, 40, 42, 40, 36 }) card.RowStyles.Add(new RowStyle(SizeType.Absolute, h));
             card.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             layout.Controls.Add(card, 0, 3);
@@ -48,7 +48,7 @@ namespace WutheringWavesSteamBridge
             var qualityRow = new BufferedLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.Transparent, ColumnCount = 2, Margin = new Padding(0, 0, 0, 6) };
             qualityRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60)); qualityRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             qualityRow.Controls.Add(MakeLabel("清晰度", 9, muted), 0, 0);
-            quality = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230, Margin = new Padding(0, 3, 0, 0) };
+            quality = new GlassComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230, Margin = new Padding(0, 3, 0, 0), BackColor = Color.FromArgb(128, Color.White) };
             quality.Items.AddRange(QualityPackage.All);
             string savedQuality = null;
             if (File.Exists(App.ConfigPath)) { try { savedQuality = App.Load<RuntimeConfig>(App.ConfigPath).Quality; } catch (Exception) { } }
@@ -75,9 +75,11 @@ namespace WutheringWavesSteamBridge
             library.LinkClicked += delegate { Process.Start("steam://nav/games/details/" + App.AppId); };
             var logs = new LinkLabel { Text = "本地记录与备份", AutoSize = true, BackColor = Color.Transparent, LinkColor = blue, Margin = new Padding(0, 0, 22, 0) };
             logs.LinkClicked += delegate { Directory.CreateDirectory(App.Home); Process.Start("explorer.exe", Arguments.Quote(App.Home)); };
-            var project = new LinkLabel { Text = "项目已开源！喜欢的话请给该项目点个⭐", AutoSize = true, BackColor = Color.Transparent, LinkColor = blue, LinkBehavior = LinkBehavior.HoverUnderline, Cursor = Cursors.Hand, Margin = new Padding(0) };
-            project.LinkClicked += delegate { Process.Start(new ProcessStartInfo("https://github.com/SoledadAki/endfield-steam-bridge") { UseShellExecute = true }); };
-            footer.Controls.Add(library); footer.Controls.Add(logs); footer.Controls.Add(project); layout.Controls.Add(footer, 0, 6);
+            var author = new LinkLabel { Text = "项目作者：LunarShaddow", AutoSize = true, BackColor = Color.Transparent, LinkColor = blue, LinkBehavior = LinkBehavior.HoverUnderline, Cursor = Cursors.Hand, Margin = new Padding(0, 0, 18, 0) };
+            author.LinkClicked += delegate { Process.Start(new ProcessStartInfo("https://github.com/aflyhorse/wuthering-waves-steam-bridge") { UseShellExecute = true }); };
+            var based = new LinkLabel { Text = "基于 SoledadAki 修改", AutoSize = true, BackColor = Color.Transparent, LinkColor = blue, LinkBehavior = LinkBehavior.HoverUnderline, Cursor = Cursors.Hand, Margin = new Padding(0) };
+            based.LinkClicked += delegate { Process.Start(new ProcessStartInfo("https://github.com/SoledadAki/endfield-steam-bridge") { UseShellExecute = true }); };
+            footer.Controls.Add(library); footer.Controls.Add(logs); footer.Controls.Add(author); footer.Controls.Add(based); layout.Controls.Add(footer, 0, 6);
             Shown += async delegate { if (!previewRendering) await RefreshDetection(); };
             FormClosing += delegate(object s, FormClosingEventArgs e) { if (busy) { e.Cancel = true; status.Text = "正在处理，请等待当前操作完成。"; } };
             SetBusy(true);
@@ -107,11 +109,23 @@ namespace WutheringWavesSteamBridge
         {
             public BufferedLayoutPanel() { DoubleBuffered = true; ResizeRedraw = true; }
         }
+        private sealed class GlassButton : Button
+        {
+            public GlassButton() { SetStyle(ControlStyles.SupportsTransparentBackColor, true); FlatStyle = FlatStyle.Flat; }
+        }
+        private sealed class GlassTextBox : TextBox
+        {
+            public GlassTextBox() { SetStyle(ControlStyles.SupportsTransparentBackColor, true); }
+        }
+        private sealed class GlassComboBox : ComboBox
+        {
+            public GlassComboBox() { SetStyle(ControlStyles.SupportsTransparentBackColor, true); }
+        }
         private Label MakeLabel(string text, float size, Color color)
         { return new Label { Text = text, Font = new Font("Microsoft YaHei UI", size), ForeColor = color, BackColor = Color.Transparent, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true, Margin = new Padding(0) }; }
         private Button MakeButton(string text, int width, bool primary)
         {
-            var b = new Button { Text = text, Width = width, Height = 40, FlatStyle = FlatStyle.Flat, BackColor = primary ? blue : Color.White, ForeColor = primary ? Color.White : ink, Margin = new Padding(0, 0, 12, 0), Cursor = Cursors.Hand };
+            var b = new GlassButton { Text = text, Width = width, Height = 40, BackColor = primary ? Color.FromArgb(128, blue) : Color.FromArgb(128, Color.White), ForeColor = primary ? Color.White : ink, Margin = new Padding(0, 0, 12, 0), Cursor = Cursors.Hand };
             b.FlatAppearance.BorderColor = primary ? blue : Color.FromArgb(200, 210, 218); return b;
         }
         private Control PathRow(string title, out TextBox text, out Button browse)
@@ -119,7 +133,7 @@ namespace WutheringWavesSteamBridge
             var row = new BufferedLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.Transparent, ColumnCount = 3, Margin = new Padding(0, 0, 0, 6) };
             row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60)); row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 64));
             row.Controls.Add(MakeLabel(title, 9, muted), 0, 0);
-            text = new TextBox { Dock = DockStyle.Fill, ReadOnly = true, BackColor = Color.FromArgb(247, 249, 250), BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(0, 3, 8, 0), Font = new Font("Microsoft YaHei UI", 9) };
+            text = new GlassTextBox { Dock = DockStyle.Fill, ReadOnly = true, BackColor = Color.FromArgb(128, Color.White), BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(0, 3, 8, 0), Font = new Font("Microsoft YaHei UI", 9) };
             browse = MakeButton("选择", 60, false); browse.Dock = DockStyle.Fill; browse.Height = 30; browse.Margin = new Padding(0);
             row.Controls.Add(text, 1, 0); row.Controls.Add(browse, 2, 0); return row;
         }
