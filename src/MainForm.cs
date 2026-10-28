@@ -134,7 +134,7 @@ namespace WutheringWavesSteamBridge
         }
         private async void ChooseGame()
         {
-            using (var dialog = new OpenFileDialog { Filter = "鸣潮游戏程序 (*.exe)|*.exe", Title = "选择鸣潮游戏目录中的可执行文件", CheckFileExists = true })
+            using (var dialog = new OpenFileDialog { Filter = "鸣潮游戏程序 (*.exe)|*.exe|所有文件 (*.*)|*.*", Title = "选择鸣潮游戏程序或其他可执行文件 / 启动脚本", CheckFileExists = true })
                 if (dialog.ShowDialog(this) == DialogResult.OK) { game.Text = dialog.FileName; await RefreshDetection(); }
         }
         private void SetBusy(bool value)

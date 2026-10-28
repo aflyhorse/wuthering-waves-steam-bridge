@@ -42,13 +42,19 @@ namespace WutheringWavesSteamBridge
         private static bool ValidGameFile(string path)
         {
             if (String.IsNullOrEmpty(path) || !File.Exists(path)) return false;
-            if (!Path.GetExtension(path).Equals(".exe", StringComparison.OrdinalIgnoreCase)) return false;
+            string extension = Path.GetExtension(path);
+            // Third-party launchers are commonly shipped as batch scripts.
+            if (extension.Equals(".bat", StringComparison.OrdinalIgnoreCase) || extension.Equals(".cmd", StringComparison.OrdinalIgnoreCase)) return true;
+            if (!extension.Equals(".exe", StringComparison.OrdinalIgnoreCase)) return false;
             using (var r = new BinaryReader(File.OpenRead(path)))
             {
                 if (r.BaseStream.Length < 64 || r.ReadUInt16() != 0x5a4d) return false;
                 r.BaseStream.Position = 0x3c; int offset = r.ReadInt32();
                 if (offset < 64 || offset + 6 > r.BaseStream.Length) return false;
-                r.BaseStream.Position = offset; return r.ReadUInt32() == 0x4550 && r.ReadUInt16() == 0x8664;
+                r.BaseStream.Position = offset;
+                if (r.ReadUInt32() != 0x4550) return false;
+                ushort machine = r.ReadUInt16();
+                return machine == 0x8664 || machine == 0x014c;
             }
         }
         public static string FindInstalledGame()
@@ -78,7 +84,7 @@ namespace WutheringWavesSteamBridge
         public static string ClientStatus(string game, out bool ready)
         {
             ready = false;
-            if (!ValidGame(game)) return "请选择鸣潮游戏目录中的可执行文件（.exe）";
+            if (!ValidGame(game)) return "请选择鸣潮游戏程序（.exe），或其他 .exe / .bat / .cmd";
             ready = true; return "游戏程序已就绪";
         }
         public static DetectionResult Scan(string game, string quality = null)

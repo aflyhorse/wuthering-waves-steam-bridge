@@ -53,11 +53,15 @@ internal static class BridgeRuntime
         {
             if (!Detection.ValidGame(Game)) throw new InvalidOperationException("找不到鸣潮游戏程序：" + Game);
             if (GameRunning()) throw new InvalidOperationException("鸣潮已在运行。请正常退出后再从 Steam 启动。");
+            // The same arguments are passed to every target, including third-party launchers.
             string arguments = "Client -krqlv=" + Quality + " -SkipSplash";
-            Log("bridge", "启动鸣潮：" + Game + " " + arguments);
+            bool script = IsScript();
+            string command = Arguments.Quote(Game) + " " + arguments;
+            Log("bridge", "启动目标：" + Game + " " + arguments);
             var info = new ProcessStartInfo
             {
-                FileName = Game, Arguments = arguments,
+                FileName = script ? (Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe") : Game,
+                Arguments = script ? "/c \"" + command + "\"" : arguments,
                 WorkingDirectory = Path.GetDirectoryName(Game), UseShellExecute = false
             };
             // Restore the app identifiers so Steam's overlay renderer attaches to the game.
@@ -83,6 +87,11 @@ internal static class BridgeRuntime
             MessageBox.Show(error.Message, "Wuthering Waves Steam Bridge", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
+    }
+    private static bool IsScript()
+    {
+        string extension = Path.GetExtension(Game);
+        return extension.Equals(".bat", StringComparison.OrdinalIgnoreCase) || extension.Equals(".cmd", StringComparison.OrdinalIgnoreCase);
     }
     private static bool GameRunning()
     {
