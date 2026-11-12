@@ -21,7 +21,7 @@
     <EmbeddedResource Include="assets\background.png"><LogicalName>WutheringWavesSteamBridge.Background</LogicalName></EmbeddedResource>
     <EmbeddedResource Include="LICENSE"><LogicalName>WutheringWavesSteamBridge.License</LogicalName></EmbeddedResource>
     <None Include="assets\WutheringWavesSteamBridge.ico" />
-    <None Include="app.manifest" /><None Include="README.md" /><None Include="请以管理员身份运行程序.txt" />
+    <None Include="app.manifest" /><None Include="README.md" /><None Include="请以管理员身份运行Steam.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

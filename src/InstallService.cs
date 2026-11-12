@@ -194,6 +194,26 @@ namespace WutheringWavesSteamBridge
             if (matches.Length > 1) throw new IOException("多个 Steam 库中都有鸣潮安装记录，请先在 Steam 中处理重复安装。");
             return matches.Length == 1 ? matches[0] : Path.Combine(steam, "steamapps", "appmanifest_3513350.acf");
         }
+        // Leftover bridge directory that would block a fresh install.
+        public static string StaleBridgeDirectory(DetectionResult scan)
+        {
+            if (scan == null || String.IsNullOrEmpty(scan.SteamRoot)) return null;
+            try
+            {
+                string directory = Path.Combine(Path.GetDirectoryName(FindManifest(scan.SteamRoot)), "common", "Wuthering Waves Steam Bridge");
+                return Directory.Exists(directory) ? directory : null;
+            }
+            catch { return null; }
+        }
+        public static void ClearBridgeDirectory(string directory)
+        {
+            string path = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar);
+            if (!String.Equals(Path.GetFileName(path), "Wuthering Waves Steam Bridge", StringComparison.OrdinalIgnoreCase)
+                || !String.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "common", StringComparison.OrdinalIgnoreCase)
+                || !String.Equals(Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(path))), "steamapps", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("目录路径不正确，已停止清空：" + directory);
+            if (Directory.Exists(path)) Directory.Delete(path, true);
+        }
         public static bool IsLegacy(string manifest)
         {
             // No legacy bridge format exists for Wuthering Waves yet.

@@ -4,6 +4,10 @@
 
 下载程序：进入本仓库的 **Releases**。Windows 下载使用 `WutheringWavesSteamBridge-<version>-win-x64.zip`，解压后以管理员身份运行 `WutheringWavesSteamBridge.exe`。
 
+> **重要：Steam 必须以“管理员身份运行”**
+>
+> 鸣潮国服使用内核级反作弊。若 Steam 的权限低于游戏进程，Shift+Tab 叠加层与 Steam 游玩时长将无法注入/统计。请右键 Steam 快捷方式选择“以管理员身份运行”；本工具同样需要管理员权限。
+
 ## 主要功能
 
 检测当前 Steam 账号是否拥有鸣潮（AppID 3513350）。
@@ -20,6 +24,6 @@
 
 需要恢复时，退出游戏，点击“撤回载入”。
 
-适用于 Windows 10/11 x64，需要 .NET Framework 4.8。Steam 也需以管理员身份运行。
+适用于 Windows 10/11 x64，需要 .NET Framework 4.8。Steam 也需以管理员身份运行（原因见上方说明）。
 
 本项目作者：LunarShaddow（[Wuthering Waves Steam Bridge](https://github.com/aflyhorse/wuthering-waves-steam-bridge)），派生自 SoledadAki 的 [Endfield Steam Bridge](https://github.com/SoledadAki/endfield-steam-bridge)，代码采用 MIT 开源协议。

@@ -167,12 +167,26 @@ namespace WutheringWavesSteamBridge
             enable.Text = state == null ? "一键载入" : "重新载入";
             status.Text = current.Error ?? (a == null || !a.Known ? "请确认 Steam 已在线登录，再点“重新检测”。" : !a.Owned ? "请先在 Steam 商店将鸣潮免费添加入库，再重新检测。" : "载入或撤回时会正常退出并重启 Steam；请先关闭游戏。\nSteam 需要以管理员身份运行，工具重启 Steam 时会使用此权限。");
         }
+        private bool ConfirmClearBridge()
+        {
+            string stale = InstallService.StaleBridgeDirectory(current);
+            if (stale == null) return true;
+            if (MessageBox.Show(this, "桥接目录非空：\n" + stale + "\n\n是否清空该目录？", "清理桥接目录", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            { status.Text = "已取消，未做任何更改。"; return false; }
+            try { InstallService.ClearBridgeDirectory(stale); return true; }
+            catch (Exception e)
+            {
+                MessageBox.Show(this, e.Message, "无法清空目录", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                status.Text = e.Message; return false;
+            }
+        }
         private async Task Mutate(bool uninstall)
         {
+            bool reload = !uninstall && File.Exists(App.StatePath);
+            if (!uninstall && !reload && current != null && !ConfirmClearBridge()) return;
             SetBusy(true);
             Action<string> report = message => { if (!IsDisposed) BeginInvoke((Action)(() => status.Text = message)); };
             string outcome = null;
-            bool reload = !uninstall && File.Exists(App.StatePath);
             try
             {
                 if (uninstall) await Task.Run(() => InstallService.Restore(report));
