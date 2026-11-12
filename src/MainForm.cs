@@ -82,7 +82,7 @@ namespace WutheringWavesSteamBridge
             var based = new LinkLabel { Text = "基于 SoledadAki 修改", AutoSize = true, BackColor = Color.Transparent, LinkColor = blue, LinkBehavior = LinkBehavior.HoverUnderline, Cursor = Cursors.Hand, Margin = new Padding(0) };
             based.LinkClicked += delegate { Process.Start(new ProcessStartInfo("https://github.com/SoledadAki/endfield-steam-bridge") { UseShellExecute = true }); };
             footer.Controls.Add(library); footer.Controls.Add(logs); footer.Controls.Add(author); footer.Controls.Add(based); layout.Controls.Add(footer, 0, 6);
-            Shown += async delegate { if (!previewRendering) await RefreshDetection(); };
+            Shown += async delegate { if (!previewRendering) { InstallService.RepairManifest(); await RefreshDetection(); } };
             FormClosing += delegate(object s, FormClosingEventArgs e) { if (busy) { e.Cancel = true; status.Text = "正在处理，请等待当前操作完成。"; } };
             SetBusy(true);
         }
@@ -142,7 +142,8 @@ namespace WutheringWavesSteamBridge
             busy = value;
             refresh.Enabled = chooseGame.Enabled = qualityButton.Enabled = !value;
             bool stateExists = File.Exists(App.StatePath);
-            enable.Enabled = !value && !stateExists && current != null && current.Account != null && current.Account.Known && current.Account.Owned && current.ClientReady;
+            enable.Enabled = !value && current != null && current.Account != null && current.Account.Known && current.Account.Owned && current.ClientReady;
+            enable.Text = stateExists ? "重新载入" : "一键载入";
             restore.Enabled = !value && stateExists;
         }
         private async Task RefreshDetection()
@@ -163,6 +164,7 @@ namespace WutheringWavesSteamBridge
             client.Text = current.GameStatus ?? "等待 Steam 检测完成";
             var state = current.Installation;
             installed.Text = state == null ? "尚未载入。原来的 Steam 游戏文件会保留。" : state.Phase == "enabled" ? "已载入" : "上次操作尚未完成，请点击“撤回载入”还原。";
+            enable.Text = state == null ? "一键载入" : "重新载入";
             status.Text = current.Error ?? (a == null || !a.Known ? "请确认 Steam 已在线登录，再点“重新检测”。" : !a.Owned ? "请先在 Steam 商店将鸣潮免费添加入库，再重新检测。" : "载入或撤回时会正常退出并重启 Steam；请先关闭游戏。\nSteam 需要以管理员身份运行，工具重启 Steam 时会使用此权限。");
         }
         private async Task Mutate(bool uninstall)
@@ -170,10 +172,13 @@ namespace WutheringWavesSteamBridge
             SetBusy(true);
             Action<string> report = message => { if (!IsDisposed) BeginInvoke((Action)(() => status.Text = message)); };
             string outcome = null;
+            bool reload = !uninstall && File.Exists(App.StatePath);
             try
             {
-                if (uninstall) await Task.Run(() => InstallService.Restore(report)); else await Task.Run(() => InstallService.Enable(current, report));
-                outcome = uninstall ? "已撤回载入并恢复 Steam。等待客户端启动后，可检查游戏库按钮。" : "载入完成。等待 Steam 启动完成后，点击鸣潮的“开始游戏”。";
+                if (uninstall) await Task.Run(() => InstallService.Restore(report));
+                else if (reload) await Task.Run(() => InstallService.Reload(current, report));
+                else await Task.Run(() => InstallService.Enable(current, report));
+                outcome = uninstall ? "已撤回载入并恢复 Steam。等待客户端启动后，可检查游戏库按钮。" : reload ? "已重新载入。等待 Steam 启动完成后，点击鸣潮的“开始游戏”。" : "载入完成。等待 Steam 启动完成后，点击鸣潮的“开始游戏”。";
             }
             catch (Exception e) { outcome = e.Message; MessageBox.Show(this, e.Message, "操作未完成", MessageBoxButtons.OK, MessageBoxIcon.Information); }
             finally

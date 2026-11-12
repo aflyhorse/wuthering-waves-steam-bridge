@@ -7,8 +7,10 @@ namespace WutheringWavesSteamBridge
 {
     internal static class App
     {
-        public const string Version = "0.2.2";
+        public const string Version = "0.2.3";
         public const uint AppId = 3513350;
+        // Pinned above any real Steam build so the client never offers a depot update.
+        public const string BuildPin = "999999999";
         public static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
         public static readonly string Home = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WutheringWavesSteamBridge");
         public static readonly string StatePath = Path.Combine(Home, "installation.json");

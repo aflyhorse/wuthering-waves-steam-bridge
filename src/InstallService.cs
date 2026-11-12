@@ -40,7 +40,7 @@ namespace WutheringWavesSteamBridge
                 var appState = new Dictionary<string, object> {
                     { "appid", App.AppId.ToString() }, { "Universe", "1" }, { "name", "Wuthering Waves" }, { "StateFlags", "4" },
                     { "installdir", Path.GetFileName(directory) }, { "LastUpdated", ((long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds).ToString() },
-                    { "SizeOnDisk", new FileInfo(exe).Length.ToString() }, { "buildid", metadata.Build }, { "LastOwner", owner.ToString() },
+                    { "SizeOnDisk", new FileInfo(exe).Length.ToString() }, { "buildid", App.BuildPin }, { "LastOwner", owner.ToString() },
                     { "UpdateResult", "0" }, { "BytesToDownload", "0" }, { "BytesDownloaded", "0" }, { "BytesToStage", "0" }, { "BytesStaged", "0" },
                     { "AutoUpdateBehavior", "1" }, { "AllowOtherDownloadsWhileRunning", "0" }, { "ScheduledAutoUpdate", "0" },
                     { "InstalledDepots", depots }, { "UserConfig", new Dictionary<string, object> { { "language", "schinese" } } },
@@ -80,6 +80,20 @@ namespace WutheringWavesSteamBridge
             RemoveBridge(state);
         }
         public void FinishRestore() { if (File.Exists(StatePath)) File.Delete(StatePath); }
+        // Steam reads buildid from the manifest; keeping it above the latest real
+        // build makes the client treat the app as up to date. Re-apply it when the
+        // client (or another tool) rewrote the manifest.
+        public void Reassert(Installation state)
+        {
+            if (state == null || state.Phase != "enabled" || !File.Exists(state.ManagedManifestBackup)) return;
+            ValidateState(state);
+            string managed = File.ReadAllText(state.ManagedManifestBackup);
+            string pinned = PinBuild(managed);
+            if (pinned != managed) { managed = pinned; File.WriteAllText(state.ManagedManifestBackup, managed, new UTF8Encoding(false)); }
+            if (!File.Exists(state.ManifestPath) || File.ReadAllText(state.ManifestPath) != managed) AtomicCopy(state.ManagedManifestBackup, state.ManifestPath);
+        }
+        private static string PinBuild(string text)
+        { return System.Text.RegularExpressions.Regex.Replace(text, "(\"buildid\"\\s*\")[^\"]*(\")", "${1}" + App.BuildPin + "${2}"); }
         private static void AtomicCopy(string source, string target)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(target));
@@ -108,6 +122,29 @@ namespace WutheringWavesSteamBridge
     {
         public static void Enable(DetectionResult scan, Action<string> progress)
         {
+            Apply(scan, progress, null);
+            progress("已载入。请等待 Steam 启动完成，再从游戏库开始游戏。");
+        }
+        // Withdraw and re-apply in a single Steam restart cycle.
+        public static void Reload(DetectionResult scan, Action<string> progress)
+        {
+            var existing = File.Exists(App.StatePath) ? App.Load<Installation>(App.StatePath) : null;
+            if (existing == null || existing.Phase != "enabled") { Enable(scan, progress); return; }
+            Apply(scan, progress, existing);
+            progress("已重新载入。请等待 Steam 启动完成，再从游戏库开始游戏。");
+        }
+        // Best effort: restore the pinned build id if Steam rewrote the manifest.
+        public static void RepairManifest()
+        {
+            try
+            {
+                if (!File.Exists(App.StatePath)) return;
+                new InstallFiles(App.Home).Reassert(App.Load<Installation>(App.StatePath));
+            }
+            catch { }
+        }
+        private static void Apply(DetectionResult scan, Action<string> progress, Installation existing)
+        {
             var account = SteamAccount.ProbeIsolated(scan.SteamRoot);
             if (!account.Known || !account.Owned) throw new InvalidOperationException(account.Error ?? "当前 Steam 账号尚未拥有《鸣潮》，请先在商店免费添加入库。");
             bool ready;
@@ -121,7 +158,8 @@ namespace WutheringWavesSteamBridge
             var files = new InstallFiles(App.Home); Installation state = null;
             try
             {
-                progress("备份原始状态并安装桥接…");
+                if (existing != null) { progress("正在撤回上次载入…"); files.Restore(existing); files.FinishRestore(); }
+                progress(existing != null ? "正在应用新的载入…" : "备份原始状态并安装桥接…");
                 Directory.CreateDirectory(Path.GetDirectoryName(App.RuntimeExe));
                 if (!Detection.Same(System.Reflection.Assembly.GetExecutingAssembly().Location, App.RuntimeExe)) File.Copy(System.Reflection.Assembly.GetExecutingAssembly().Location, App.RuntimeExe, true);
                 state = files.Prepare(scan.SteamRoot, manifest, App.RuntimeExe, metadata, account.SteamId, legacy);
@@ -134,7 +172,6 @@ namespace WutheringWavesSteamBridge
                 throw;
             }
             finally { StartSteam(scan.SteamRoot); }
-            progress("已载入。请等待 Steam 启动完成，再从游戏库开始游戏。");
         }
         public static void Restore(Action<string> progress)
         {

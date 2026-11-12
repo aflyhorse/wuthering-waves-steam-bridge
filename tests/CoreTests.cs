@@ -80,6 +80,17 @@ namespace WutheringWavesSteamBridge
                     Throws(() => service.Restore(state), "external manifest changes are preserved for review");
                     File.Copy(state.ManagedManifestBackup, manifest, true); service.Restore(state); service.FinishRestore();
                 }
+                {
+                    string steam = Path.Combine(root, "pin"), home = Path.Combine(root, "pin-data");
+                    string manifest = Path.Combine(steam, "steamapps", "appmanifest_3513350.acf");
+                    Directory.CreateDirectory(Path.GetDirectoryName(manifest));
+                    var service = new InstallFiles(home); var state = service.Prepare(steam, manifest, exe, metadata, 1, false); service.Commit(state);
+                    Check(File.ReadAllText(manifest).Contains(App.BuildPin), "manifest pins build id above any real build");
+                    File.WriteAllText(manifest, File.ReadAllText(manifest).Replace(App.BuildPin, "42"));
+                    service.Reassert(state);
+                    Check(File.ReadAllText(manifest).Contains(App.BuildPin), "reassert restores pinned build id");
+                    service.Restore(state); service.FinishRestore();
+                }
                 Console.WriteLine("ALL " + count + " CHECKS PASSED"); return 0;
             }
             catch (Exception e) { Console.Error.WriteLine(e); return 1; }
